@@ -19,11 +19,13 @@ export default function App() {
     const [loadingPost, setLoadingPost] = useState(false);
     const [loadingSinglePost, setLoadingSinglePost] = useState(false);
     const [loadingEditPost, setLoadingEditPost] = useState(false);
+    const [loadingDeletePost, setLoadingDeletePost] = useState(false);
 
     const [error, setError] = useState("");
     const [formError, setFormError] = useState("");
     const [singlePostError, setSinglePostError] = useState("");
     const [editPostError, setEditPostError] = useState("");
+    const [deletePostError, setDeletePostError] = useState("");
 
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
@@ -40,6 +42,8 @@ export default function App() {
     const [editTitle, setEditTitle] = useState("");
     const [editBody, setEditBody] = useState("");
     const [editUserId, setEditUserId] = useState("");
+
+    const [deletePostId, setDeletePostId] = useState("");
 
     useEffect(() => {
         fetchPosts();
@@ -244,6 +248,56 @@ export default function App() {
         }
     };
 
+    const deletePost = async () => {
+        setDeletePostError("");
+
+        if (!deletePostId.trim()) {
+            setDeletePostError("Please enter a post ID to delete.");
+            return;
+        }
+
+        const postIdNumber = Number(deletePostId);
+
+        if (Number.isNaN(postIdNumber)) {
+            setDeletePostError("Post ID must be a number.");
+            return;
+        }
+
+        try {
+            setLoadingDeletePost(true);
+            setError("");
+
+            const response = await fetch(`${API_URL}/${postIdNumber}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+
+            setPosts((prevPosts) =>
+                prevPosts.filter((post) => post.id !== postIdNumber),
+            );
+
+            setSelectedPost((prev) =>
+                prev && prev.id === postIdNumber ? null : prev,
+            );
+
+            setCreatedPost((prev) =>
+                prev && prev.id === postIdNumber ? null : prev,
+            );
+
+            Alert.alert("Success", "Post deleted successfully.");
+
+            setDeletePostId("");
+        } catch (err) {
+            setDeletePostError("Failed to delete post.");
+            console.error(err);
+        } finally {
+            setLoadingDeletePost(false);
+        }
+    };
+
     const renderItem = ({ item }) => (
         <View style={styles.postCard}>
             <Text style={styles.postId}>ID: {item.id}</Text>
@@ -398,6 +452,32 @@ export default function App() {
                 >
                     <Text style={styles.buttonText}>
                         {loadingEditPost ? "Updating..." : "Update Post"}
+                    </Text>
+                </Pressable>
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Delete Post (DELETE)</Text>
+
+                <TextInput
+                    style={styles.input}
+                    placeholder="Post ID to delete"
+                    value={deletePostId}
+                    onChangeText={setDeletePostId}
+                    keyboardType="numeric"
+                />
+
+                {deletePostError ? (
+                    <Text style={styles.formError}>{deletePostError}</Text>
+                ) : null}
+
+                <Pressable
+                    style={styles.button}
+                    onPress={deletePost}
+                    disabled={loadingDeletePost}
+                >
+                    <Text style={styles.buttonText}>
+                        {loadingDeletePost ? "Deleting..." : "Delete Post"}
                     </Text>
                 </Pressable>
             </View>
