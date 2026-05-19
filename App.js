@@ -32,6 +32,8 @@ export default function App() {
 
     const [createdPost, setCreatedPost] = useState(null);
 
+    const [filterUserId, setFilterUserId] = useState("");
+
     useEffect(() => {
         fetchPosts();
     }, []);
@@ -160,6 +162,10 @@ export default function App() {
         </View>
     );
 
+    const filteredPosts = filterUserId.trim()
+        ? posts.filter((p) => String(p.userId) === filterUserId.trim())
+        : posts;
+
     return (
         <ScrollView
             style={styles.container}
@@ -258,6 +264,14 @@ export default function App() {
             <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Posts List</Text>
 
+                <TextInput
+                    style={styles.input}
+                    placeholder="Filter by userId"
+                    value={filterUserId}
+                    onChangeText={setFilterUserId}
+                    keyboardType="numeric"
+                />
+
                 {loading ? (
                     <ActivityIndicator size="large" />
                 ) : error ? (
@@ -266,7 +280,7 @@ export default function App() {
                     </View>
                 ) : (
                     <FlatList
-                        data={posts}
+                        data={filteredPosts}
                         keyExtractor={(item) => item.id.toString()}
                         renderItem={renderItem}
                         scrollEnabled={false}
