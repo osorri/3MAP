@@ -20,12 +20,14 @@ export default function App() {
     const [loadingSinglePost, setLoadingSinglePost] = useState(false);
     const [loadingEditPost, setLoadingEditPost] = useState(false);
     const [loadingDeletePost, setLoadingDeletePost] = useState(false);
+    const [loadingComments, setLoadingComments] = useState(false);
 
     const [error, setError] = useState("");
     const [formError, setFormError] = useState("");
     const [singlePostError, setSinglePostError] = useState("");
     const [editPostError, setEditPostError] = useState("");
     const [deletePostError, setDeletePostError] = useState("");
+    const [commentsError, setCommentsError] = useState("");
 
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
@@ -33,6 +35,7 @@ export default function App() {
 
     const [postIdToFetch, setPostIdToFetch] = useState("");
     const [selectedPost, setSelectedPost] = useState(null);
+    const [selectedPostComments, setSelectedPostComments] = useState([]);
 
     const [createdPost, setCreatedPost] = useState(null);
 
@@ -70,9 +73,33 @@ export default function App() {
         }
     };
 
+    const fetchCommentsForPost = async (postId) => {
+        try {
+            setLoadingComments(true);
+            setCommentsError("");
+            setSelectedPostComments([]);
+
+            const response = await fetch(`${API_URL}/${postId}/comments`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            setSelectedPostComments(data);
+        } catch (err) {
+            setCommentsError("Failed to fetch comments.");
+            console.error(err);
+        } finally {
+            setLoadingComments(false);
+        }
+    };
+
     const fetchPostDetails = async () => {
         setSinglePostError("");
+        setCommentsError("");
         setSelectedPost(null);
+        setSelectedPostComments([]);
 
         if (!postIdToFetch.trim()) {
             setSinglePostError("Please enter a post ID.");
@@ -103,6 +130,7 @@ export default function App() {
             }
 
             setSelectedPost(data);
+            await fetchCommentsForPost(postIdNumber);
         } catch (err) {
             setSinglePostError("Failed to fetch post details.");
             console.error(err);
@@ -283,6 +311,10 @@ export default function App() {
                 prev && prev.id === postIdNumber ? null : prev,
             );
 
+            setSelectedPostComments((prev) =>
+                selectedPost && selectedPost.id === postIdNumber ? [] : prev,
+            );
+
             setCreatedPost((prev) =>
                 prev && prev.id === postIdNumber ? null : prev,
             );
@@ -305,6 +337,14 @@ export default function App() {
             <Text style={styles.postTitle}>Title: {item.title}</Text>
 
             <Text style={styles.postBody}>Body: {item.body}</Text>
+        </View>
+    );
+
+    const renderCommentItem = ({ item }) => (
+        <View style={styles.commentCard}>
+            <Text style={styles.commentName}>{item.name}</Text>
+            <Text style={styles.commentEmail}>{item.email}</Text>
+            <Text style={styles.commentBody}>{item.body}</Text>
         </View>
     );
 
@@ -403,6 +443,30 @@ export default function App() {
                         <Text style={styles.successText}>
                             {JSON.stringify(selectedPost, null, 2)}
                         </Text>
+
+                        <Text style={[styles.successTitle, { marginTop: 12 }]}>
+                            Comments:
+                        </Text>
+
+                        {loadingComments ? (
+                            <ActivityIndicator style={{ marginTop: 10 }} />
+                        ) : commentsError ? (
+                            <Text style={styles.formError}>
+                                {commentsError}
+                            </Text>
+                        ) : selectedPostComments.length > 0 ? (
+                            <FlatList
+                                data={selectedPostComments}
+                                keyExtractor={(item) => item.id.toString()}
+                                renderItem={renderCommentItem}
+                                scrollEnabled={false}
+                                contentContainerStyle={{ marginTop: 10 }}
+                            />
+                        ) : (
+                            <Text style={styles.successText}>
+                                No comments found for this post.
+                            </Text>
+                        )}
                     </View>
                 )}
             </View>
@@ -631,5 +695,29 @@ const styles = StyleSheet.create({
 
     postBody: {
         color: "#444",
+    },
+
+    commentCard: {
+        backgroundColor: "#fff",
+        borderWidth: 1,
+        borderColor: "#d9d9d9",
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 10,
+    },
+
+    commentName: {
+        fontWeight: "700",
+        marginBottom: 2,
+    },
+
+    commentEmail: {
+        fontSize: 12,
+        color: "#666",
+        marginBottom: 8,
+    },
+
+    commentBody: {
+        color: "#333",
     },
 });
