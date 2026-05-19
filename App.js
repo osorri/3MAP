@@ -17,13 +17,18 @@ export default function App() {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [loadingPost, setLoadingPost] = useState(false);
+    const [loadingSinglePost, setLoadingSinglePost] = useState(false);
 
     const [error, setError] = useState("");
     const [formError, setFormError] = useState("");
+    const [singlePostError, setSinglePostError] = useState("");
 
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
     const [userId, setUserId] = useState("");
+
+    const [postIdToFetch, setPostIdToFetch] = useState("");
+    const [selectedPost, setSelectedPost] = useState(null);
 
     const [createdPost, setCreatedPost] = useState(null);
 
@@ -49,6 +54,47 @@ export default function App() {
             console.error(err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchPostDetails = async () => {
+        setSinglePostError("");
+        setSelectedPost(null);
+
+        if (!postIdToFetch.trim()) {
+            setSinglePostError("Please enter a post ID.");
+            return;
+        }
+
+        const postIdNumber = Number(postIdToFetch);
+
+        if (Number.isNaN(postIdNumber)) {
+            setSinglePostError("Post ID must be a number.");
+            return;
+        }
+
+        try {
+            setLoadingSinglePost(true);
+
+            const response = await fetch(`${API_URL}/${postIdNumber}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (!data || Object.keys(data).length === 0) {
+                setSinglePostError("No post found with the given ID.");
+                return;
+            }
+
+            setSelectedPost(data);
+        } catch (err) {
+            setSinglePostError("Failed to fetch post details.");
+            console.error(err);
+        } finally {
+            setLoadingSinglePost(false);
         }
     };
 
@@ -169,6 +215,41 @@ export default function App() {
 
                         <Text style={styles.successText}>
                             {JSON.stringify(createdPost, null, 2)}
+                        </Text>
+                    </View>
+                )}
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Get Single Post</Text>
+
+                <TextInput
+                    style={styles.input}
+                    placeholder="Post ID, e.g. 1"
+                    value={postIdToFetch}
+                    onChangeText={setPostIdToFetch}
+                    keyboardType="numeric"
+                />
+
+                {singlePostError ? (
+                    <Text style={styles.formError}>{singlePostError}</Text>
+                ) : null}
+
+                <Pressable
+                    style={styles.button}
+                    onPress={fetchPostDetails}
+                    disabled={loadingSinglePost}
+                >
+                    <Text style={styles.buttonText}>
+                        {loadingSinglePost ? "Loading..." : "Fetch Post"}
+                    </Text>
+                </Pressable>
+
+                {selectedPost && (
+                    <View style={styles.successBox}>
+                        <Text style={styles.successTitle}>Post details:</Text>
+                        <Text style={styles.successText}>
+                            {JSON.stringify(selectedPost, null, 2)}
                         </Text>
                     </View>
                 )}
