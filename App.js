@@ -18,10 +18,12 @@ export default function App() {
     const [loading, setLoading] = useState(true);
     const [loadingPost, setLoadingPost] = useState(false);
     const [loadingSinglePost, setLoadingSinglePost] = useState(false);
+    const [loadingEditPost, setLoadingEditPost] = useState(false);
 
     const [error, setError] = useState("");
     const [formError, setFormError] = useState("");
     const [singlePostError, setSinglePostError] = useState("");
+    const [editPostError, setEditPostError] = useState("");
 
     const [title, setTitle] = useState("");
     const [body, setBody] = useState("");
@@ -33,6 +35,11 @@ export default function App() {
     const [createdPost, setCreatedPost] = useState(null);
 
     const [filterUserId, setFilterUserId] = useState("");
+
+    const [editPostId, setEditPostId] = useState("");
+    const [editTitle, setEditTitle] = useState("");
+    const [editBody, setEditBody] = useState("");
+    const [editUserId, setEditUserId] = useState("");
 
     useEffect(() => {
         fetchPosts();
@@ -152,6 +159,91 @@ export default function App() {
         }
     };
 
+    const updatePost = async () => {
+        setEditPostError("");
+
+        if (!editPostId.trim()) {
+            setEditPostError("Please enter a post ID to edit.");
+            return;
+        }
+
+        const postIdNumber = Number(editPostId);
+
+        if (Number.isNaN(postIdNumber)) {
+            setEditPostError("Post ID must be a number.");
+            return;
+        }
+
+        const payload = {};
+
+        if (editTitle.trim()) payload.title = editTitle.trim();
+        if (editBody.trim()) payload.body = editBody.trim();
+        if (editUserId.trim()) {
+            const userIdNumber = Number(editUserId);
+            if (Number.isNaN(userIdNumber)) {
+                setEditPostError("userId must be a number.");
+                return;
+            }
+            payload.userId = userIdNumber;
+        }
+
+        if (Object.keys(payload).length === 0) {
+            setEditPostError("Enter at least one field to update.");
+            return;
+        }
+
+        try {
+            setLoadingEditPost(true);
+            setError("");
+
+            const response = await fetch(`${API_URL}/${postIdNumber}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json; charset=UTF-8",
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error: ${response.status}`);
+            }
+
+            const updatedPost = await response.json();
+
+            setPosts((prevPosts) =>
+                prevPosts.map((post) =>
+                    post.id === postIdNumber
+                        ? { ...post, ...updatedPost }
+                        : post,
+                ),
+            );
+
+            setSelectedPost((prev) =>
+                prev && prev.id === postIdNumber
+                    ? { ...prev, ...updatedPost }
+                    : prev,
+            );
+
+            setCreatedPost((prev) =>
+                prev && prev.id === postIdNumber
+                    ? { ...prev, ...updatedPost }
+                    : prev,
+            );
+
+            Alert.alert("Success", "Post updated successfully.");
+
+            setEditPostId("");
+            setEditTitle("");
+            setEditBody("");
+            setEditUserId("");
+        } catch (err) {
+            setEditPostError("Failed to update post.");
+            console.error(err);
+        } finally {
+            setLoadingEditPost(false);
+        }
+    };
+
     const renderItem = ({ item }) => (
         <View style={styles.postCard}>
             <Text style={styles.postId}>ID: {item.id}</Text>
@@ -259,6 +351,55 @@ export default function App() {
                         </Text>
                     </View>
                 )}
+            </View>
+
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Edit Post (PATCH)</Text>
+
+                <TextInput
+                    style={styles.input}
+                    placeholder="Post ID to edit"
+                    value={editPostId}
+                    onChangeText={setEditPostId}
+                    keyboardType="numeric"
+                />
+
+                <TextInput
+                    style={styles.input}
+                    placeholder="New title (optional)"
+                    value={editTitle}
+                    onChangeText={setEditTitle}
+                />
+
+                <TextInput
+                    style={[styles.input, styles.multilineInput]}
+                    placeholder="New body (optional)"
+                    value={editBody}
+                    onChangeText={setEditBody}
+                    multiline
+                />
+
+                <TextInput
+                    style={styles.input}
+                    placeholder="New user ID (optional)"
+                    value={editUserId}
+                    onChangeText={setEditUserId}
+                    keyboardType="numeric"
+                />
+
+                {editPostError ? (
+                    <Text style={styles.formError}>{editPostError}</Text>
+                ) : null}
+
+                <Pressable
+                    style={styles.button}
+                    onPress={updatePost}
+                    disabled={loadingEditPost}
+                >
+                    <Text style={styles.buttonText}>
+                        {loadingEditPost ? "Updating..." : "Update Post"}
+                    </Text>
+                </Pressable>
             </View>
 
             <View style={styles.section}>
